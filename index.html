@@ -3,80 +3,73 @@
 <head>
     <title>CFU Uncertainty Calculator</title>
     <style>
-        /* Basic CSS for the sheet look */
         body { font-family: Arial, sans-serif; margin: 20px; }
-        table { border-collapse: collapse; width: 600px; }
+        table { border-collapse: collapse; width: 800px; margin-bottom: 20px;}
         th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-        input[type="number"] { width: 100px; }
-        .log-col { background-color: #f0f0ff; }
-        .result-col { font-weight: bold; background-color: #e0ffe0; }
+        .yellow-highlight { background-color: #ffff00; }
+        .result-cell { font-weight: bold; }
+        .input-box { width: 100%; box-sizing: border-box; }
+        .formula-col { width: 45%; }
+        .comment-col { width: 30%; font-size: 0.9em; color: #555; }
+        .center-text { text-align: center; }
+        #error-message { color: red; font-weight: bold; margin-top: 10px; }
+        
+        /* Specific formatting for the key result cell */
+        #input_result { width: 150px; } 
+        #log_result, #mu_sample_center { text-align: center; }
     </style>
 </head>
 <body>
     <h1>Microbiology CFU Uncertainty Calculator</h1>
+    <p id="error-message"></p>
 
     <table>
         <thead>
             <tr>
-                <th>CFU Count (N)</th>
-                <th>log₁₀(N)</th>
-                <th>Results</th>
-                <th>Value</th>
+                <th colspan="2" class="yellow-highlight">Description</th>
+                <th colspan="3" class="yellow-highlight center-text">Calculation/Result</th>
+                <th>Notes</th>
             </tr>
         </thead>
         <tbody>
             <tr>
-                <td><input type="number" id="cfu1" value="105" oninput="calculate()"></td>
-                <td id="log1" class="log-col"></td>
-                <td>Mean log₁₀ (μlog)</td>
-                <td id="mean_log" class="result-col"></td>
-            </tr>
-            <tr>
-                <td><input type="number" id="cfu2" value="98" oninput="calculate()"></td>
-                <td id="log2" class="log-col"></td>
-                <td>Standard Deviation (Slog)</td>
-                <td id="stdev_log" class="result-col"></td>
-            </tr>
-            <tr>
-                <td><input type="number" id="cfu3" value="112" oninput="calculate()"></td>
-                <td id="log3" class="log-col"></td>
-                <td>Coverage Factor (k)</td>
-                <td id="k_factor" class="result-col">2.00</td>
-            </tr>
-            <tr>
-                <td><input type="number" id="cfu4" value="101" oninput="calculate()"></td>
-                <td id="log4" class="log-col"></td>
-                <td>Expanded Uncertainty (Ulog)</td>
-                <td id="exp_uncert" class="result-col"></td>
-            </tr>
-            <tr>
-                <td><input type="number" id="cfu5" value="96" oninput="calculate()"></td>
-                <td id="log5" class="log-col"></td>
-                <td></td>
-                <td></td>
+                <td colspan="2" class="yellow-highlight">Result (CFU):</td>
+                <td colspan="3"><input type="number" id="input_result" class="input-box" value="50" oninput="calculate()"></td>
+                <td class="comment-col">Key in result here</td>
             </tr>
 
             <tr>
-                <td colspan="4" style="text-align: center; background-color: #ddd;">**CFU Scale Final Interval (95% CI)**</td>
+                <td colspan="2" class="yellow-highlight">Log10 of Result:</td>
+                <td colspan="3" id="log_result" class="result-cell center-text"></td>
+                <td class="comment-col">Result converted to Log10</td>
             </tr>
-            <tr>
-                <td colspan="2"></td>
-                <td>**Reported Mean CFU**</td>
-                <td id="mean_cfu" class="result-col"></td>
-            </tr>
-            <tr>
-                <td colspan="2"></td>
-                <td>**Lower Limit (CFU)**</td>
-                <td id="lower_limit" class="result-col"></td>
-            </tr>
-            <tr>
-                <td colspan="2"></td>
-                <td>**Upper Limit (CFU)**</td>
-                <td id="upper_limit" class="result-col"></td>
-            </tr>
-        </tbody>
-    </table>
 
-    <script src="calculator.js"></script>
-    <script>calculate();</script> </body>
-</html>
+            <tr>
+                <td colspan="2" class="yellow-highlight">Report Result:</td>
+                <td id="report_result_log_val" class="result-cell center-text"></td>
+                <td class="center-text">±</td>
+                <td id="fixed_uncertainty" class="result-cell center-text">0.1108</td>
+                <td class="comment-col">Include uncertainty to the result</td>
+            </tr>
+
+            <tr>
+                <td colspan="2" class="yellow-highlight">Expanded Uncertainty Value (Log10):</td>
+                <td colspan="3" class="result-cell center-text">0.1108</td>
+                <td class="comment-col">Combined uncertainty value from "Reproducible" and "Analyst"</td>
+            </tr>
+
+            <tr style="height: 40px;">
+                <td colspan="2" class="yellow-highlight">Uncertainty Interval (Log10):</td>
+                <td id="log_lower" class="result-cell center-text"></td>
+                <td class="center-text"><</td>
+                <td id="log_upper" class="result-cell center-text"></td>
+                <td class="comment-col">Upper and lower interval, result will minus and add from expanded uncertainty value</td>
+            </tr>
+
+            <tr style="height: 40px;">
+                <td colspan="2" class="yellow-highlight">MU of the sample (CFU):</td>
+                <td id="cfu_lower" class="result-cell center-text"></td>
+                <td id="mu_sample_center" class="result-cell center-text"></td>
+                <td id="cfu_upper" class="result-cell center-text"></td>
+                <td class="comment-col">Convert Uncertainty Interval Log value to CFU</td>
+            </tr>
