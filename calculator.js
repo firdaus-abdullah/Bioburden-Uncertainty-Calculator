@@ -1,68 +1,65 @@
-// Function to calculate the Standard Deviation of an array
-function standardDeviation(arr) {
-    const n = arr.length;
-    if (n === 0) return 0;
-    const mean = arr.reduce((a, b) => a + b) / n;
-    return Math.sqrt(arr.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / (n - 1));
-}
-
-// Main calculation function
 function calculate() {
-    const k_factor = 2.0; // Coverage factor for 95% confidence
-
-    // 1. Collect and Log Transform Data
-    const cfuInputs = [
-        document.getElementById('cfu1'),
-        document.getElementById('cfu2'),
-        document.getElementById('cfu3'),
-        document.getElementById('cfu4'),
-        document.getElementById('cfu5')
-    ];
+    const inputCFUElement = document.getElementById('input_result');
+    const rawCFU = parseFloat(inputCFUElement.value);
     
-    // Filter out empty or non-numeric values
-    const rawCFUs = cfuInputs.map(input => parseFloat(input.value)).filter(val => val > 0);
+    // Fixed Expanded Uncertainty Value from the template example (0.1108)
+    const EXPANDED_UNCERTAINTY = 0.1108; 
 
-    // Apply log10 and update the table (B column)
-    const logValues = rawCFUs.map(cfu => Math.log10(cfu));
-    
-    // Display log values (handling the original 5 rows)
-    for (let i = 0; i < 5; i++) {
-        const logCell = document.getElementById(`log${i + 1}`);
-        if (i < logValues.length) {
-            logCell.textContent = logValues[i].toFixed(4);
-        } else {
-            logCell.textContent = ''; // Clear if less than 5 data points
-        }
+    // Reset error message
+    document.getElementById('error-message').textContent = '';
+
+    // Function to clear all result fields
+    function clearResults() {
+        const idsToClear = ['log_result', 'report_result_log_val', 'log_lower', 'log_upper', 'cfu_lower', 'mu_sample_center', 'cfu_upper', 'final_lower', 'final_upper'];
+        idsToClear.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = '#NUM!'; 
+            }
+        });
+        document.getElementById('fixed_uncertainty').textContent = EXPANDED_UNCERTAINTY.toFixed(4);
     }
-
-    if (logValues.length < 2) {
-        // Not enough data for statistics
-        document.getElementById('mean_log').textContent = 'N/A';
-        document.getElementById('stdev_log').textContent = 'N/A';
-        document.getElementById('exp_uncert').textContent = 'N/A';
-        document.getElementById('mean_cfu').textContent = 'N/A';
-        document.getElementById('lower_limit').textContent = 'N/A';
-        document.getElementById('upper_limit').textContent = 'N/A';
+    
+    // --- Error Handling (0 CFU or Invalid Input) ---
+    if (isNaN(rawCFU) || rawCFU < 0) {
+        document.getElementById('error-message').textContent = 'Error: Please key in a valid CFU count (must be non-negative).';
+        clearResults();
+        return;
+    }
+    
+    if (rawCFU === 0) {
+        document.getElementById('error-message').textContent = 'Error: Log10 of 0 is undefined. Report as "< 1 cfu" based on the limit of detection.';
+        clearResults();
         return;
     }
 
-    // 2. Log Scale Calculations
-    const meanLog = logValues.reduce((a, b) => a + b) / logValues.length;
-    const stdevLog = standardDeviation(logValues);
-    const expUncert = stdevLog * k_factor;
+    // --- Log Scale Calculations ---
+    const logResult = Math.log10(rawCFU);
+    const logLower = logResult - EXPANDED_UNCERTAINTY;
+    const logUpper = logResult + EXPANDED_UNCERTAINTY;
 
-    // 3. Anti-log (CFU Scale) Calculations
-    const meanCFU = Math.pow(10, meanLog);
-    const lowerLimit = Math.pow(10, meanLog - expUncert);
-    const upperLimit = Math.pow(10, meanLog + expUncert);
+    // --- CFU Scale (Anti-log) Calculations ---
+    const cfuLower = Math.pow(10, logLower);
+    const cfuUpper = Math.pow(10, logUpper);
 
-    // 4. Display Results
-    document.getElementById('mean_log').textContent = meanLog.toFixed(4);
-    document.getElementById('stdev_log').textContent = stdevLog.toFixed(4);
-    document.getElementById('exp_uncert').textContent = expUncert.toFixed(4);
-    document.getElementById('k_factor').textContent = k_factor.toFixed(2); // Ensure k is always shown
+    // --- Update HTML Elements ---
+    
+    // Row 2: Log10 of Result
+    document.getElementById('log_result').textContent = logResult.toFixed(4);
+    
+    // Row 3: Report Result (Log10 ± Uncertainty)
+    document.getElementById('report_result_log_val').textContent = logResult.toFixed(4);
+    
+    // Row 5: Uncertainty Interval (Log10)
+    document.getElementById('log_lower').textContent = logLower.toFixed(4);
+    document.getElementById('log_upper').textContent = logUpper.toFixed(4);
+    
+    // Row 6: MU of the sample (CFU - Anti-log)
+    document.getElementById('cfu_lower').textContent = cfuLower.toFixed(2);
+    document.getElementById('mu_sample_center').textContent = `< ${rawCFU.toFixed(0)} <`; // Uses the raw CFU for the middle value
+    document.getElementById('cfu_upper').textContent = cfuUpper.toFixed(2);
 
-    document.getElementById('mean_cfu').textContent = meanCFU.toFixed(1);
-    document.getElementById('lower_limit').textContent = lowerLimit.toFixed(1);
-    document.getElementById('upper_limit').textContent = upperLimit.toFixed(1);
+    // Row 7: Final Uncertainty Interval (CFU) - Rounded to whole numbers
+    document.getElementById('final_lower').textContent = Math.round(cfuLower);
+    document.getElementById('final_upper').textContent = Math.round(cfuUpper);
 }
