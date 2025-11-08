@@ -1,65 +1,87 @@
-function calculate() {
-    const inputCFUElement = document.getElementById('input_result');
-    const rawCFU = parseFloat(inputCFUElement.value);
-    
-    // Fixed Expanded Uncertainty Value from the template example (0.1108)
-    const EXPANDED_UNCERTAINTY = 0.1108; 
+/**
+ * calculator.js
+ * Contains the logic for the Bioburden MU Calculator.
+ */
 
-    // Reset error message
-    document.getElementById('error-message').textContent = '';
+function calculateBioburden() {
+    // 1. Get input values
+    const resultCFUInput = document.getElementById('resultCFU');
+    const expandedUncertaintyLog10Input = document.getElementById('expandedUncertaintyLog10');
 
-    // Function to clear all result fields
-    function clearResults() {
-        const idsToClear = ['log_result', 'report_result_log_val', 'log_lower', 'log_upper', 'cfu_lower', 'mu_sample_center', 'cfu_upper', 'final_lower', 'final_upper'];
-        idsToClear.forEach(id => {
-            const element = document.getElementById(id);
-            if (element) {
-                element.textContent = '#NUM!'; 
-            }
-        });
-        document.getElementById('fixed_uncertainty').textContent = EXPANDED_UNCERTAINTY.toFixed(4);
-    }
-    
-    // --- Error Handling (0 CFU or Invalid Input) ---
-    if (isNaN(rawCFU) || rawCFU < 0) {
-        document.getElementById('error-message').textContent = 'Error: Please key in a valid CFU count (must be non-negative).';
-        clearResults();
-        return;
-    }
-    
-    if (rawCFU === 0) {
-        document.getElementById('error-message').textContent = 'Error: Log10 of 0 is undefined. Report as "< 1 cfu" based on the limit of detection.';
-        clearResults();
-        return;
+    // Convert inputs to numbers, defaulting to 0 if empty or invalid
+    const resultCFU = parseFloat(resultCFUInput.value) || 0;
+    const expandedUncertaintyLog10 = parseFloat(expandedUncertaintyLog10Input.value) || 0;
+
+    // Check for negative CFU, although log is typically undefined/complex for non-positive numbers
+    if (resultCFU <= 0) {
+        // Handle the case for 0 or negative CFU gracefully
+        if (resultCFU === 0) {
+            // As per the remark: if result < 1, report as <1. For 0, we can't calculate log10.
+            // We'll set the primary log10 values to a non-numeric error or 0 for display consistency, 
+            // but the official report remark should be followed for real-world reporting.
+            displayError("CFU must be > 0 for Log10 calculation. See Remark for <1 cfu.");
+            return;
+        } else {
+            // Negative CFU case (should not happen for Bioburden)
+            displayError("CFU Result cannot be negative.");
+            return;
+        }
     }
 
-    // --- Log Scale Calculations ---
-    const logResult = Math.log10(rawCFU);
-    const logLower = logResult - EXPANDED_UNCERTAINTY;
-    const logUpper = logResult + EXPANDED_UNCERTAINTY;
+    // --- 2. Perform Calculations ---
 
-    // --- CFU Scale (Anti-log) Calculations ---
-    const cfuLower = Math.pow(10, logLower);
-    const cfuUpper = Math.pow(10, logUpper);
+    // Log10 of Result: Log10(Result)
+    const log10Result = Math.log10(resultCFU);
 
-    // --- Update HTML Elements ---
-    
-    // Row 2: Log10 of Result
-    document.getElementById('log_result').textContent = logResult.toFixed(4);
-    
-    // Row 3: Report Result (Log10 ± Uncertainty)
-    document.getElementById('report_result_log_val').textContent = logResult.toFixed(4);
-    
-    // Row 5: Uncertainty Interval (Log10)
-    document.getElementById('log_lower').textContent = logLower.toFixed(4);
-    document.getElementById('log_upper').textContent = logUpper.toFixed(4);
-    
-    // Row 6: MU of the sample (CFU - Anti-log)
-    document.getElementById('cfu_lower').textContent = cfuLower.toFixed(2);
-    document.getElementById('mu_sample_center').textContent = `< ${rawCFU.toFixed(0)} <`; // Uses the raw CFU for the middle value
-    document.getElementById('cfu_upper').textContent = cfuUpper.toFixed(2);
+    // Uncertainty Interval (Log10): Log10(Result) +/- Expanded Uncertainty
+    const uncertaintyIntervalLog10Lower = log10Result - expandedUncertaintyLog10;
+    const uncertaintyIntervalLog10Upper = log10Result + expandedUncertaintyLog10;
 
-    // Row 7: Final Uncertainty Interval (CFU) - Rounded to whole numbers
-    document.getElementById('final_lower').textContent = Math.round(cfuLower);
-    document.getElementById('final_upper').textContent = Math.round(cfuUpper);
+    // MU of the sample (CFU): Convert Log10 Interval to CFU (10^Log10 Interval)
+    const muSampleCFULower = Math.pow(10, uncertaintyIntervalLog10Lower);
+    const muSampleCFUUpper = Math.pow(10, uncertaintyIntervalLog10Upper);
+
+    // --- 3. Display Results (Formatting to match the image's precision) ---
+
+    // Log10 of Result (4 decimal places like 1.6990)
+    document.getElementById('log10Result').textContent = log10Result.toFixed(4);
+
+    // Report Result (Log10)
+    const formattedLog10Result = log10Result.toFixed(4);
+    const formattedUncertainty = expandedUncertaintyLog10.toFixed(4);
+    document.getElementById('reportLog10Value').textContent = formattedLog10Result;
+    document.getElementById('reportLog10Uncertainty').textContent = formattedUncertainty;
+    // Report Result (CFU) - just showing the input for context, the interval is the key
+    document.getElementById('reportCFUValue').textContent = resultCFU.toFixed(1);
+
+    // Uncertainty Interval (Log10) (5 decimal places like 1.58817 and 1.8098)
+    document.getElementById('uncertaintyIntervalLog10Lower').textContent = uncertaintyIntervalLog10Lower.toFixed(5);
+    document.getElementById('uncertaintyIntervalLog10Upper').textContent = uncertaintyIntervalLog10Upper.toFixed(5);
+
+    // MU of the sample (CFU) (1 decimal place like 38.7 and 64.5)
+    const formattedMULower = muSampleCFULower.toFixed(1);
+    const formattedMUUpper = muSampleCFUUpper.toFixed(1);
+    document.getElementById('muSampleCFULower').textContent = formattedMULower;
+    document.getElementById('muSampleCFUUpper').textContent = formattedMUUpper;
+
+    // Uncertainty Interval (CFU) (No decimal places like 38 and 64, by rounding)
+    const finalIntervalLower = Math.round(muSampleCFULower);
+    const finalIntervalUpper = Math.round(muSampleCFUUpper);
+    document.getElementById('uncertaintyIntervalCFULower').textContent = finalIntervalLower;
+    document.getElementById('uncertaintyIntervalCFUUpper').textContent = finalIntervalUpper;
+}
+
+function displayError(message) {
+    // A simple way to clear results and show an error in the UI
+    document.getElementById('log10Result').textContent = 'ERROR';
+    document.getElementById('reportLog10Value').textContent = 'ERROR';
+    document.getElementById('reportLog10Uncertainty').textContent = 'N/A';
+    document.getElementById('reportCFUValue').textContent = 'N/A';
+    document.getElementById('uncertaintyIntervalLog10Lower').textContent = 'N/A';
+    document.getElementById('uncertaintyIntervalLog10Upper').textContent = 'N/A';
+    document.getElementById('muSampleCFULower').textContent = 'N/A';
+    document.getElementById('muSampleCFUUpper').textContent = 'N/A';
+    document.getElementById('uncertaintyIntervalCFULower').textContent = 'N/A';
+    document.getElementById('uncertaintyIntervalCFUUpper').textContent = 'N/A';
+    alert(message);
 }
